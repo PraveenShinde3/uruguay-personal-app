@@ -14,8 +14,16 @@ export async function POST(req: Request) {
   } catch {
     return Response.json({ error: "Invalid request." }, { status: 400 });
   }
-  const { date, time, activity, clientId } = b ?? {};
+  const { date, time, activity, clientId, who } = b ?? {};
   const act = ACTIVITIES.find((a) => a.id === activity);
+  const name =
+    typeof who === "string"
+      ? who
+          .replace(/[\r\n]/g, " ")
+          .trim()
+          .slice(0, 40)
+      : "";
+  const label = name || "Someone";
   const validDate =
     typeof date === "string" &&
     /^\d{4}-\d{2}-\d{2}$/.test(date) &&
@@ -73,10 +81,11 @@ export async function POST(req: Request) {
   }
 
   const html = `<div style="font-family:Georgia,serif;max-width:480px;margin:auto;padding:24px;background:#FFFAF3;color:#4A2C3C">
-    <h1 style="font-weight:500">She said yes! 💌</h1>
+    <h1 style="font-weight:500">${esc(label)} said yes! 💌</h1>
+    <p><b>Who:</b> ${esc(label)}<br/><b>Date:</b> ${esc(prettyDate)}<br/>...
     <p><b>Date:</b> ${esc(prettyDate)}<br/><b>Time:</b> ${esc(time)}<br/><b>Activity:</b> ${esc(summary.activity)}</p>
     <p style="color:#8A6B7A;font-size:13px">Confirmed on ${esc(submittedAt)} (Montevideo time)</p></div>`;
-  const text = `She said yes!\nDate: ${prettyDate}\nTime: ${time}\nActivity: ${summary.activity}\nConfirmed: ${submittedAt}`;
+  const text = `${label} said yes!\nDate: ${prettyDate}\nTime: ${time}\nActivity: ${summary.activity}\nConfirmed: ${submittedAt}`;
   try {
     const { error } = await new Resend(key).emails.send(
       {
@@ -84,7 +93,7 @@ export async function POST(req: Request) {
           process.env.NOTIFY_EMAIL_FROM ||
           "Date Invite <onboarding@resend.dev>",
         to,
-        subject: "She said yes! 💌",
+        subject: `${label} said yes! 💌`,
         html,
         text,
       },
